@@ -1,5 +1,3 @@
-/* 僞僀儅娭學 */
-
 #include "bootpack.h"
 
 #define PIT_CTRL	0x0043
@@ -7,116 +5,147 @@
 
 struct TIMERCTL timerctl;
 
-#define TIMER_FLAGS_ALLOC		1	/* 妋曐偟偨忬懺 */
-#define TIMER_FLAGS_USING		2	/* 僞僀儅嶌摦拞 */
+#define TIMER_FLAGS_ALLOC		1	
+#define TIMER_FLAGS_USING		2	
 
+/*弶巒壔PIT*/
 void init_pit(void)
 {
 	int i;
 	struct TIMER *t;
+	
 	io_out8(PIT_CTRL, 0x34);
 	io_out8(PIT_CNT0, 0x9c);
 	io_out8(PIT_CNT0, 0x2e);
+	
 	timerctl.count = 0;
 	for (i = 0; i < MAX_TIMER; i++) {
-		timerctl.timers0[i].flags = 0; /* 未使用 */
+		timerctl.timers0[i].flags = 0; /*??枹巊梡*/
 	}
-	t = timer_alloc(); /* 堦偮傕傜偭偰偔傞 */
+	
+	t = timer_alloc(); /*怽?堦槩??婍嶌?彛暫*/
 	t->timeout = 0xffffffff;
 	t->flags = TIMER_FLAGS_USING;
-	t->next = 0; /* 堦斣偆偟傠 */
-	timerctl.t0 = t; /* 崱偼斣暫偟偐偄側偄偺偱愭摢偱傕偁傞 */
-	timerctl.next = 0xffffffff; /* 斣暫偟偐偄側偄偺偱斣暫偺帪崗 */
+	t->next = 0; 		/*杤桳壓堦槩??婍*/
+	timerctl.t0 = t; 	/*?昞揑?*/
+	timerctl.next = 0xffffffff; 
+	
 	return;
 }
 
+/*岦??婍娗棟婍怽?堦槩??婍*/
 struct TIMER *timer_alloc(void)
 {
 	int i;
+	/*曊??漄枹旐巊梡揑??婍*/
 	for (i = 0; i < MAX_TIMER; i++) {
 		if (timerctl.timers0[i].flags == 0) {
 			timerctl.timers0[i].flags = TIMER_FLAGS_ALLOC;
 			return &timerctl.timers0[i];
 		}
 	}
-	return 0; /* 尒偮偐傜側偐偭偨 */
+	
+	return 0; /*杤桳漄摓*/
 }
 
+/*?曻巊梡?揑??婍*/
 void timer_free(struct TIMER *timer)
 {
-	timer->flags = 0; /* 未使用 */
+	timer->flags = 0; /*巊梡忬?抲0*/
+	
 	return;
 }
 
+/*弶巒壔??婍乮?抲幨擖揑?檛嬫榓幨擖揑?乯*/
 void timer_init(struct TIMER *timer, struct FIFO32 *fifo, int data)
 {
 	timer->fifo = fifo;
 	timer->data = data;
+	
 	return;
 }
 
+/*???婍?掕??*/
 void timer_settime(struct TIMER *timer, unsigned int timeout)
 {
 	int e;
 	struct TIMER *t, *s;
-	timer->timeout = timeout + timerctl.count;
+	
+	timer->timeout = timeout + timerctl.count;	/*???懇揑?崗*/
 	timer->flags = TIMER_FLAGS_USING;
+	
 	e = io_load_eflags();
 	io_cli();
+	
 	t = timerctl.t0;
 	if (timer->timeout <= t->timeout) {
-		/* 插入最前面的情况 */
+		/*潎擖嵼?昞?晹*/
 		timerctl.t0 = timer;
-		timer->next = t; /* 设定t */
+		timer->next = t; 
 		timerctl.next = timer->timeout;
+		
 		io_store_eflags(e);
+		
 		return;
 	}
-	/* 搜寻插入位置 */
-	for (;;) {
+	/*斲?潎擖摓?昞拞?乮場?桳彛暫揑懚嵼強埲晄夛潎擖帄枛旜乯*/
+	while(1){
 		s = t;
 		t = t->next;
+		/*?漄潎擖埵抲*/
 		if (timer->timeout <= t->timeout) {
-			/* 插入s，t之间的情况 */
-			s->next = timer; /* s的下一个是timer */
-			timer->next = t;/* timer的下一个是t */
+			/*潎擖嵼*s榓*t擵?*/
+			s->next = timer; 
+			timer->next = t;
+			
 			io_store_eflags(e);
 			return;
 		}
 	}
 }
 
+/*20崋乮??婍乯拞抐?棟*/
 void inthandler20(int *esp)
 {
 	struct TIMER *timer;
 	char ts = 0;
-	io_out8(PIC0_OCW2, 0x60);	/* 把IRQ-OO接收信号结束的消息告诉PIC*/
+	
+	io_out8(PIC0_OCW2, 0x60);
 	timerctl.count++;
+	
+	/*庒澷挻???婍*/
 	if (timerctl.next > timerctl.count) {
 		return;
 	}
+	
+	/*桳??婍挻?*/
 	timer = timerctl.t0; 
-	for (;;) {
-		/* 因为timer定时器都处于运行状态，所以flags是不确认flags */
+	while(1){
 		if (timer->timeout > timerctl.count) {
-			break;
+			break;	/*漄摓枹挻?揑??婍?挼弌丆嵼?擵慜揑搒惀挻?揑??婍*/
 		}
-		/* 超时 */
+		/*?挻???婍揑?棟*/
 		timer->flags = TIMER_FLAGS_ALLOC;
-		if (timer != mt_timer) {
+		if (timer != task_timer) {	/*堦斒揑??婍*/
+			/*岦?檛嬫幨擖悢悩*/
 			fifo32_put(timer->fifo, timer->data);
 		}
-		else {
-			ts = 1; /* mt_timer超时 */
+		else {		/*擟?愗???婍*/
+			ts = 1; /*挻??巙抲1*/
 		}
-		timer = timer->next; /* 把下一个定时器的地址赋值给Timer */
+		
+		timer = timer->next; /*巜岦壓堦槩??婍*/
 	}
-	timerctl.t0 = timer;
-	/*timerctl.next的设定*/
+	
+	/*廳怴巜掕?昞?*/
+	timerctl.t0 = timer;	
+	/*廳怴?掕壓堦槩挻??崗*/
 	timerctl.next = timer->timeout;
+	
+	/*摉擟?愗???婍挻?*/
 	if (ts != 0)
 	{
-		mt_taskswitch();
+		task_switch();	/*擟?挼?*/
 	}
 	return;
 }

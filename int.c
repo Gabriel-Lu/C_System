@@ -1,6 +1,7 @@
 #include "bootpack.h"
-void init_pic(void)
+
 /*≥ı ºªØPIC*/
+void init_pic(void)
 {
 	io_out8(PIC0_IMR,  0xff  ); 
 	io_out8(PIC1_IMR,  0xff  ); 

@@ -1,10 +1,10 @@
 ; naskfunc
 ; TAB=4
 
-[FORMAT "WCOFF"]				; オブジェクトファイルを作るモード	
-[INSTRSET "i486p"]				; 486の命令まで使いたいという記述
-[BITS 32]						; 32ビットモード用の機械語を作らせる
-[FILE "naskfunc.nas"]			; ソースファイル名情報
+[FORMAT "WCOFF"]				
+[INSTRSET "i486p"]				
+[BITS 32]						
+[FILE "naskfunc.nas"]			
 
 		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
 		GLOBAL	_io_in8,  _io_in16,  _io_in32
@@ -75,14 +75,14 @@ _io_out32:	; void io_out32(int port, int data);
 		RET
 
 _io_load_eflags:	; int io_load_eflags(void);
-		PUSHFD		; PUSH EFLAGS という意味
+		PUSHFD		
 		POP		EAX
 		RET
 
 _io_store_eflags:	; void io_store_eflags(int eflags);
 		MOV		EAX,[ESP+4]
 		PUSH	EAX
-		POPFD		; POP EFLAGS という意味
+		POPFD		
 		RET
 
 _load_gdtr:		; void load_gdtr(int limit, int addr);
@@ -175,7 +175,7 @@ _asm_inthandler2c:
 		IRETD
 
 _memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
-		PUSH	EDI						; （EBX, ESI, EDI も使いたいので）
+		PUSH	EDI						
 		PUSH	ESI
 		PUSH	EBX
 		MOV		ESI,0xaa55aa55			; pat0 = 0xaa55aa55;

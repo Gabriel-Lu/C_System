@@ -1,11 +1,12 @@
 #include <stdio.h>
+
 /* asmhead.nas */
 struct BOOTINFO { /* 0x0ff0-0x0fff */
-	char cyls; /* ブートセクタはどこまでディスクを読んだのか */
-	char leds; /* ブート時のキーボードのLEDの状態 */
-	char vmode; /* ビデオモード  何ビットカラーか */
+	char cyls; 
+	char leds; 
+	char vmode; 
 	char reserve;
-	short scrnx, scrny; /* 画面解像度 */
+	short scrnx, scrny; 
 	char *vram;
 };
 #define ADR_BOOTINFO	0x00000ff0
@@ -35,8 +36,9 @@ void farjmp(int eip, int cs);
 struct FIFO32 {
 	int *buf;
 	int p, q, size, free, flags;
+	struct TASK *task;
 };
-void fifo32_init(struct FIFO32 *fifo, int size, int *buf);
+void fifo32_init(struct FIFO32 *fifo, int size, int *buf, struct TASK *task);
 int fifo32_put(struct FIFO32 *fifo, int data);
 int fifo32_get(struct FIFO32 *fifo);
 int fifo32_status(struct FIFO32 *fifo);
@@ -126,12 +128,12 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 /* memory.c */
-#define MEMMAN_FREES		4090	/* これで約32KB */
+#define MEMMAN_FREES		4090	
 #define MEMMAN_ADDR			0x003c0000
-struct FREEINFO {	/* あき情報 */
+struct FREEINFO {	
 	unsigned int addr, size;
 };
-struct MEMMAN {		/* メモリ管理 */
+struct MEMMAN {		
 	int frees, maxfrees, lostsize, losts;
 	struct FREEINFO free[MEMMAN_FREES];
 };
@@ -189,6 +191,35 @@ void timer_settime(struct TIMER *timer, unsigned int timeout);
 void inthandler20(int *esp);
 
 /* mtask.c */
-extern struct TIMER *mt_timer;
-void mt_init(void);
-void mt_taskswitch(void);
+#define MAX_TASKS		1000	/*最大任?数*/
+#define TASK_GDT0		3		/*TSS段在GDT中的首?号*/
+#define MAX_TASKS_LV	100		/*?个等?最大任?数*/
+#define MAX_TASKLEVELS	10		/*等?数（0-9）*/
+struct TSS32 {	/*TSS段*/
+	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
+	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
+	int es, cs, ss, ds, fs, gs;
+	int ldtr, iomap;
+};
+struct TASK {	/*任?*/
+	int sel, flags; 	/*sel：GDT中的位置；flags：任?状?（0：未使用；1：休眠；2：?行）*/
+	int level, priority;/*level：任?等?；priority：任??先?*/
+	struct TSS32 tss;	/*TSS段*/
+};
+struct TASKLEVEL {	/*任?等?*/
+	int running; 	/*?等??行的任?数*/
+	int now; 		/*?在?行的任?在数?中的下?*/
+	struct TASK *tasks[MAX_TASKS_LV];	/*任?指?数?*/
+};
+struct TASKCTL {	/*任?管理器*/
+	int now_lv; 	/*?在正在?行中的任?等?*/
+	char lv_change; /*?志位，表示最高等?可能?生了?化*/
+	struct TASKLEVEL level[MAX_TASKLEVELS];
+	struct TASK tasks0[MAX_TASKS];	/*所有的任? */
+};
+extern struct TIMER *task_timer;
+struct TASK *task_init(struct MEMMAN *memman);
+struct TASK *task_alloc(void);
+void task_run(struct TASK *task, int level, int priority);
+void task_switch(void);
+void task_sleep(struct TASK *task);
