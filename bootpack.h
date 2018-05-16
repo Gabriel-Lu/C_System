@@ -166,7 +166,7 @@ void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1);
 void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 /* timer.c */
@@ -201,10 +201,11 @@ struct TSS32 {	/*TSS段*/
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
 };
-struct TASK {	/*任?*/
-	int sel, flags; 	/*sel：GDT中的位置；flags：任?状?（0：未使用；1：休眠；2：?行）*/
-	int level, priority;/*level：任?等?；priority：任??先?*/
-	struct TSS32 tss;	/*TSS段*/
+struct TASK {
+	int sel, flags; /* selはGDTの番号のこと */
+	int level, priority;
+	struct FIFO32 fifo;
+	struct TSS32 tss;
 };
 struct TASKLEVEL {	/*任?等?*/
 	int running; 	/*?等??行的任?数*/
