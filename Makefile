@@ -18,12 +18,12 @@ IMGTOL   = $(TOOLPATH)imgtol.com
 COPY     = copy
 DEL      = del
 
-# ƒfƒtƒHƒ‹ƒg“®ì
+# é»˜è®¤åŠ¨ä½œ
 
 default :
 	$(MAKE) img
 
-# ƒtƒ@ƒCƒ‹¶¬‹K‘¥
+# é•œåƒæ–‡ä»¶ç”Ÿæˆ
 
 ipl10.bin : ipl10.nas Makefile
 	$(NASK) ipl10.nas ipl10.bin ipl10.lst
@@ -52,9 +52,11 @@ haribote.img : ipl10.bin haribote.sys Makefile
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:haribote.sys to:@: \
+		copy from:ipl10.nas to:@: \
+		copy from:make.bat to:@: \
 		imgout:haribote.img
 
-# ˆê”Ê‹K‘¥
+# å…¶ä»–æŒ‡ä»¤
 
 %.gas : %.c bootpack.h Makefile
 	$(CC1) -o $*.gas $*.c
@@ -65,7 +67,7 @@ haribote.img : ipl10.bin haribote.sys Makefile
 %.obj : %.nas Makefile
 	$(NASK) $*.nas $*.obj $*.lst
 
-# ƒRƒ}ƒ“ƒh
+# è¿è¡Œç¨‹åº
 
 img :
 	$(MAKE) haribote.img

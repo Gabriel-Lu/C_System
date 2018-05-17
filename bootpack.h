@@ -1,15 +1,14 @@
-#include <stdio.h>
-
 /* asmhead.nas */
 struct BOOTINFO { /* 0x0ff0-0x0fff */
-	char cyls; 
-	char leds; 
-	char vmode; 
+	char cyls; /* å¯åŠ¨åŒºè¯»ç£ç›˜è¯»åˆ°æ­¤ä¸ºæ­¢ */
+	char leds; /* å¯åŠ¨æ—¶é”®ç›˜çš„LEDçš„çŠ¶æ€ */
+	char vmode; /* æ˜¾å¡æ¨¡å¼ä¸ºå¤šå°‘ä½å½©è‰² */
 	char reserve;
-	short scrnx, scrny; 
+	short scrnx, scrny; /* ç”»é¢åˆ†è¾¨ç‡ */
 	char *vram;
 };
 #define ADR_BOOTINFO	0x00000ff0
+#define ADR_DISKIMG		0x00100000
 
 /* naskfunc.nas */
 void io_hlt(void);
@@ -128,12 +127,12 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 /* memory.c */
-#define MEMMAN_FREES		4090	
+#define MEMMAN_FREES 4090 /* å¤§çº¦æ˜¯32KB*/
 #define MEMMAN_ADDR			0x003c0000
-struct FREEINFO {	
+struct FREEINFO { /* å¯ç”¨ä¿¡æ¯ */
 	unsigned int addr, size;
 };
-struct MEMMAN {		
+struct MEMMAN { /* å†…å­˜ç®¡ç† */
 	int frees, maxfrees, lostsize, losts;
 	struct FREEINFO free[MEMMAN_FREES];
 };
@@ -166,9 +165,6 @@ void sheet_refresh(struct SHEET *sht, int bx0, int by0, int bx1, int by1);
 void sheet_slide(struct SHEET *sht, int vx0, int vy0);
 void sheet_free(struct SHEET *sht);
 
-void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
-void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
-void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 /* timer.c */
 #define MAX_TIMER		500
 struct TIMER {
@@ -191,32 +187,32 @@ void timer_settime(struct TIMER *timer, unsigned int timeout);
 void inthandler20(int *esp);
 
 /* mtask.c */
-#define MAX_TASKS		1000	/*Å‘å”C?”*/
-#define TASK_GDT0		3		/*TSS’iİGDT’†“Iñ?†*/
-#define MAX_TASKS_LV	100		/*?˜¢“™?Å‘å”C?”*/
-#define MAX_TASKLEVELS	10		/*“™?”i0-9j*/
-struct TSS32 {	/*TSS’i*/
+#define MAX_TASKS 1000	/*æœ€å¤§ä»»åŠ¡æ•°é‡*/
+#define TASK_GDT0 3			/*å®šä¹‰ä»GDTçš„å‡ å·å¼€å§‹åˆ†é…ç»™TSS */
+#define MAX_TASKS_LV    100
+#define MAX_TASKLEVELS  10
+struct TSS32 {
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
 	int es, cs, ss, ds, fs, gs;
 	int ldtr, iomap;
 };
 struct TASK {
-	int sel, flags; /* sel‚ÍGDT‚Ì”Ô†‚Ì‚±‚Æ */
-	int level, priority;
+	int sel, flags;		/* selç”¨æ¥å­˜æ”¾GDTçš„ç¼–å·*/
+	int level, priority; /* ä¼˜å…ˆçº§ */
 	struct FIFO32 fifo;
 	struct TSS32 tss;
 };
-struct TASKLEVEL {	/*”C?“™?*/
-	int running; 	/*?“™??s“I”C?”*/
-	int now; 		/*?İ?s“I”C?İ”?’†“I‰º?*/
-	struct TASK *tasks[MAX_TASKS_LV];	/*”C?w?”?*/
+struct TASKLEVEL {
+	int running; /*æ­£åœ¨è¿è¡Œçš„ä»»åŠ¡æ•°é‡*/
+	int now; /*è¿™ä¸ªå˜é‡ç”¨æ¥è®°å½•å½“å‰æ­£åœ¨è¿è¡Œçš„æ˜¯å“ªä¸ªä»»åŠ¡*/
+	struct TASK *tasks[MAX_TASKS_LV];
 };
-struct TASKCTL {	/*”C?ŠÇ—Ší*/
-	int now_lv; 	/*?İ³İ?s’†“I”C?“™?*/
-	char lv_change; /*?uˆÊC•\¦Å‚“™?‰Â”\?¶—¹?‰»*/
+struct TASKCTL {
+	int now_lv; /*ç°åœ¨æ´»åŠ¨ä¸­çš„LEVEL */
+	char lv_change; /*åœ¨ä¸‹æ¬¡ä»»åŠ¡åˆ‡æ¢æ—¶æ˜¯å¦éœ€è¦æ”¹å˜LEVEL */
 	struct TASKLEVEL level[MAX_TASKLEVELS];
-	struct TASK tasks0[MAX_TASKS];	/*Š—L“I”C? */
+	struct TASK tasks0[MAX_TASKS];
 };
 extern struct TIMER *task_timer;
 struct TASK *task_init(struct MEMMAN *memman);

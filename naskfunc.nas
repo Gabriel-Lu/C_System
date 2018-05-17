@@ -1,10 +1,10 @@
 ; naskfunc
 ; TAB=4
 
-[FORMAT "WCOFF"]				
-[INSTRSET "i486p"]				
-[BITS 32]						
-[FILE "naskfunc.nas"]			
+[FORMAT "WCOFF"]				; 制作目标文件的模式	
+[INSTRSET "i486p"]				; 使用到486为止的指令
+[BITS 32]						; 3制作32位模式用的机器语言
+[FILE "naskfunc.nas"]			; 文件名
 
 		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
 		GLOBAL	_io_in8,  _io_in16,  _io_in32
@@ -75,14 +75,14 @@ _io_out32:	; void io_out32(int port, int data);
 		RET
 
 _io_load_eflags:	; int io_load_eflags(void);
-		PUSHFD		
+		PUSHFD		; PUSH EFLAGS 
 		POP		EAX
 		RET
 
 _io_store_eflags:	; void io_store_eflags(int eflags);
 		MOV		EAX,[ESP+4]
 		PUSH	EAX
-		POPFD		
+		POPFD		; POP EFLAGS 
 		RET
 
 _load_gdtr:		; void load_gdtr(int limit, int addr);
@@ -175,7 +175,7 @@ _asm_inthandler2c:
 		IRETD
 
 _memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
-		PUSH	EDI						
+		PUSH	EDI						; （由于还要使用EBX, ESI, EDI）
 		PUSH	ESI
 		PUSH	EBX
 		MOV		ESI,0xaa55aa55			; pat0 = 0xaa55aa55;
@@ -208,5 +208,5 @@ mts_fin:
 		RET
 
 _farjmp:		; void farjmp(int eip, int cs);
-		JMP		FAR	[ESP+4]				; eip, cs
+		JMP    FAR [ESP+4]    ; eip, cs
 		RET

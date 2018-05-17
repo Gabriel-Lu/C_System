@@ -1,28 +1,27 @@
+/* é”®ç›˜æ§åˆ¶ä»£ç  */
+
 #include "bootpack.h"
 
 struct FIFO32 *keyfifo;
 int keydata0;
 
-/*21ºÅ£¨¼üÅÌ£©ÖĞ¶Ï´¦Àí*/
 void inthandler21(int *esp)
 {
 	int data;
-	
-	io_out8(PIC0_OCW2, 0x61);
+	io_out8(PIC0_OCW2, 0x61); /* æŠŠIRQ-01æ¥æ”¶ä¿¡å·ç»“æŸçš„ä¿¡æ¯é€šçŸ¥ç»™PIC */
 	data = io_in8(PORT_KEYDAT);
 	fifo32_put(keyfifo, data + keydata0);
-	
 	return;
 }
 
-#define PORT_KEYSTA				0x0064
+#define PORT_KEYSTA						0x0064
 #define KEYSTA_SEND_NOTREADY	0x02
-#define KEYCMD_WRITE_MODE		0x60
-#define KBC_MODE				0x47
+#define KEYCMD_WRITE_MODE			0x60
+#define KBC_MODE							0x47
 
-/*µÈ´ı¼üÅÌÄÜ¹»·¢ËÍÊı¾İ*/
-void wait_KBC_sendready(void)
+void wait_KBC_sendready(void) 
 {
+	/* ç­‰å¾…é”®ç›˜æ§åˆ¶ç”µè·¯å‡†å¤‡å®Œæ¯• */
 	for (;;) {
 		if ((io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0) {
 			break;
@@ -31,15 +30,15 @@ void wait_KBC_sendready(void)
 	return;
 }
 
-/*³õÊ¼»¯¼üÅÌÖĞ¶Ï*/
 void init_keyboard(struct FIFO32 *fifo, int data0)
 {
+	/* å°†FIFOç¼“å†²åŒºçš„ä¿¡æ¯ä¿å­˜åˆ°å…¨å±€å˜é‡é‡Œ */
 	keyfifo = fifo;
 	keydata0 = data0;
+	/* é”®ç›˜æ§åˆ¶å™¨çš„åˆå§‹åŒ– */
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
 	wait_KBC_sendready();
 	io_out8(PORT_KEYDAT, KBC_MODE);
-	
 	return;
 }

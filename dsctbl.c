@@ -1,31 +1,28 @@
+/* GDTã€IDTã€descriptor table å…³ç³»å¤„ç† */
 
 #include "bootpack.h"
-/*³õÊ¼»¯GDTºÍIDT*/
+
 void init_gdtidt(void)
 {
-	/*ÎªGDTºÍIDT·ÖÅäÊ×µØÖ·*/
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
 	struct GATE_DESCRIPTOR    *idt = (struct GATE_DESCRIPTOR    *) ADR_IDT;
 	int i;
 
-	/*GDT³õÊ¼»¯*/
+	/* GDTåˆå§‹åŒ– */
 	for (i = 0; i <= LIMIT_GDT / 8; i++) {
 		set_segmdesc(gdt + i, 0, 0, 0);
 	}
-
-	/*×¢²á¼üÅÌºÍÊó±êÖĞ¶Ï*/
 	set_segmdesc(gdt + 1, 0xffffffff,   0x00000000, AR_DATA32_RW);
 	set_segmdesc(gdt + 2, LIMIT_BOTPAK, ADR_BOTPAK, AR_CODE32_ER);
-	
-	/*ÔØÈëGDT*/
 	load_gdtr(LIMIT_GDT, ADR_GDT);
 
-	/*IDT³õÊ¼»¯*/
+	/* IDTåˆå§‹åŒ– */
 	for (i = 0; i <= LIMIT_IDT / 8; i++) {
 		set_gatedesc(idt + i, 0, 0, 0);
 	}
 	load_idtr(LIMIT_IDT, ADR_IDT);
 
+	/* IDTè®¾ç½®*/
 	set_gatedesc(idt + 0x20, (int) asm_inthandler20, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x21, (int) asm_inthandler21, 2 * 8, AR_INTGATE32);
 	set_gatedesc(idt + 0x27, (int) asm_inthandler27, 2 * 8, AR_INTGATE32);
@@ -34,14 +31,10 @@ void init_gdtidt(void)
 	return;
 }
 
-/*
-¹¦ÄÜ£º½¨Á¢Ò»¸ö¶ÎÃèÊö·û
-²ÎÊı£º¶ÎÃèÊö·ûÊ×µØÖ·£¬¶ÎÏŞ³¤£¬¶Î»ùÖ·£¬¶ÎÊôĞÔ
-*/
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar)
 {
 	if (limit > 0xfffff) {
-		ar |= 0x8000;  /*·ÖÒ³*/
+		ar |= 0x8000; /* G_bit = 1 */
 		limit /= 0x1000;
 	}
 	sd->limit_low    = limit & 0xffff;
@@ -53,10 +46,6 @@ void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, i
 	return;
 }
 
-/*
-¹¦ÄÜ£º½¨Á¢Ò»¸öÃÅÃèÊö·û
-²ÎÊı£ºÃÅÃèÊö·ûÊ×µØÖ·£¬µØÖ·Æ«ÒÆÁ¿£¬Ñ¡Ôñ·û£¬ÊôĞÔ
-*/
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 {
 	gd->offset_low   = offset & 0xffff;
