@@ -1,10 +1,10 @@
 ; naskfunc
 ; TAB=4
 
-[FORMAT "WCOFF"]				; åˆ¶ä½œç›®æ ‡æ–‡ä»¶çš„æ¨¡å¼	
-[INSTRSET "i486p"]				; ä½¿ç”¨åˆ°486ä¸ºæ­¢çš„æŒ‡ä»¤
-[BITS 32]						; 3åˆ¶ä½œ32ä½æ¨¡å¼ç”¨çš„æœºå™¨è¯­è¨€
-[FILE "naskfunc.nas"]			; æ–‡ä»¶å
+[FORMAT "WCOFF"]				; ƒIƒuƒWƒFƒNƒgƒtƒ@ƒCƒ‹‚ğì‚éƒ‚[ƒh	
+[INSTRSET "i486p"]				; 486‚Ì–½—ß‚Ü‚Åg‚¢‚½‚¢‚Æ‚¢‚¤‹Lq
+[BITS 32]						; 32ƒrƒbƒgƒ‚[ƒh—p‚Ì‹@ŠBŒê‚ğì‚ç‚¹‚é
+[FILE "naskfunc.nas"]			; ƒ\[ƒXƒtƒ@ƒCƒ‹–¼î•ñ
 
 		GLOBAL	_io_hlt, _io_cli, _io_sti, _io_stihlt
 		GLOBAL	_io_in8,  _io_in16,  _io_in32
@@ -15,13 +15,15 @@
 		GLOBAL	_load_tr
 		GLOBAL	_asm_inthandler20, _asm_inthandler21
 		GLOBAL	_asm_inthandler27, _asm_inthandler2c
+		GLOBAL	_asm_inthandler0d
 		GLOBAL	_memtest_sub
 		GLOBAL	_farjmp, _farcall
-		GLOBAL	_asm_hrb_api
+		GLOBAL	_asm_hrb_api, _start_app
 		EXTERN	_inthandler20, _inthandler21
 		EXTERN	_inthandler27, _inthandler2c
+		EXTERN	_inthandler0d
 		EXTERN	_hrb_api
-		
+
 [SECTION .text]
 
 _io_hlt:	; void io_hlt(void);
@@ -77,14 +79,14 @@ _io_out32:	; void io_out32(int port, int data);
 		RET
 
 _io_load_eflags:	; int io_load_eflags(void);
-		PUSHFD		; PUSH EFLAGS 
+		PUSHFD		; PUSH EFLAGS ‚Æ‚¢‚¤ˆÓ–¡
 		POP		EAX
 		RET
 
 _io_store_eflags:	; void io_store_eflags(int eflags);
 		MOV		EAX,[ESP+4]
 		PUSH	EAX
-		POPFD		; POP EFLAGS 
+		POPFD		; POP EFLAGS ‚Æ‚¢‚¤ˆÓ–¡
 		RET
 
 _load_gdtr:		; void load_gdtr(int limit, int addr);
@@ -176,8 +178,28 @@ _asm_inthandler2c:
 		POP		ES
 		IRETD
 
+_asm_inthandler0d:
+		STI
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler0d
+		CMP		EAX,0		; ‚±‚±‚¾‚¯ˆá‚¤
+		JNE		end_app		; ‚±‚±‚¾‚¯ˆá‚¤
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		ADD		ESP,4			; INT 0x0d ‚Å‚ÍA‚±‚ê‚ª•K—v
+		IRETD
+
 _memtest_sub:	; unsigned int memtest_sub(unsigned int start, unsigned int end)
-		PUSH	EDI						; ï¼ˆç”±äºè¿˜è¦ä½¿ç”¨EBX, ESI, EDIï¼‰
+		PUSH	EDI						; iEBX, ESI, EDI ‚àg‚¢‚½‚¢‚Ì‚Åj
 		PUSH	ESI
 		PUSH	EBX
 		MOV		ESI,0xaa55aa55			; pat0 = 0xaa55aa55;
@@ -210,19 +232,55 @@ mts_fin:
 		RET
 
 _farjmp:		; void farjmp(int eip, int cs);
-		JMP    FAR [ESP+4]    ; eip, cs
+		JMP		FAR	[ESP+4]				; eip, cs
 		RET
-		
+
 _farcall:		; void farcall(int eip, int cs);
 		CALL	FAR	[ESP+4]				; eip, cs
 		RET
 
 _asm_hrb_api:
 		STI
-		PUSHAD	; ä¿å­˜å¯„å­˜å™¨çš„å€¼
-		PUSHAD	; å‘hrb_apié€å…¥å‚æ•°
+		PUSH	DS
+		PUSH	ES
+		PUSHAD		; •Û‘¶‚Ì‚½‚ß‚ÌPUSH
+		PUSHAD		; hrb_api‚É‚í‚½‚·‚½‚ß‚ÌPUSH
+		MOV		AX,SS
+		MOV		DS,AX		; OS—p‚ÌƒZƒOƒƒ“ƒg‚ğDS‚ÆES‚É‚à“ü‚ê‚é
+		MOV		ES,AX
 		CALL	_hrb_api
+		CMP		EAX,0		; EAX‚ª0‚Å‚È‚¯‚ê‚ÎƒAƒvƒŠI—¹ˆ—
+		JNE		end_app
 		ADD		ESP,32
 		POPAD
+		POP		ES
+		POP		DS
 		IRETD
+end_app:
+;	EAX‚Ítss.esp0‚Ì”Ô’n
+		MOV		ESP,[EAX]
+		POPAD
+		RET					; cmd_app‚Ö‹A‚é
 
+_start_app:		; void start_app(int eip, int cs, int esp, int ds, int *tss_esp0);
+		PUSHAD		; 32ƒrƒbƒgƒŒƒWƒXƒ^‚ğ‘S•”•Û‘¶‚µ‚Ä‚¨‚­
+		MOV		EAX,[ESP+36]	; ƒAƒvƒŠ—p‚ÌEIP
+		MOV		ECX,[ESP+40]	; ƒAƒvƒŠ—p‚ÌCS
+		MOV		EDX,[ESP+44]	; ƒAƒvƒŠ—p‚ÌESP
+		MOV		EBX,[ESP+48]	; ƒAƒvƒŠ—p‚ÌDS/SS
+		MOV		EBP,[ESP+52]	; tss.esp0‚Ì”Ô’n
+		MOV		[EBP  ],ESP		; OS—p‚ÌESP‚ğ•Û‘¶
+		MOV		[EBP+4],SS		; OS—p‚ÌSS‚ğ•Û‘¶
+		MOV		ES,BX
+		MOV		DS,BX
+		MOV		FS,BX
+		MOV		GS,BX
+;	ˆÈ‰º‚ÍRETF‚ÅƒAƒvƒŠ‚És‚©‚¹‚é‚½‚ß‚ÌƒXƒ^ƒbƒN’²®
+		OR		ECX,3			; ƒAƒvƒŠ—p‚ÌƒZƒOƒƒ“ƒg”Ô†‚É3‚ğOR‚·‚é
+		OR		EBX,3			; ƒAƒvƒŠ—p‚ÌƒZƒOƒƒ“ƒg”Ô†‚É3‚ğOR‚·‚é
+		PUSH	EBX				; ƒAƒvƒŠ‚ÌSS
+		PUSH	EDX				; ƒAƒvƒŠ‚ÌESP
+		PUSH	ECX				; ƒAƒvƒŠ‚ÌCS
+		PUSH	EAX				; ƒAƒvƒŠ‚ÌEIP
+		RETF
+;	ƒAƒvƒŠ‚ªI—¹‚µ‚Ä‚à‚±‚±‚É‚Í—ˆ‚È‚¢
