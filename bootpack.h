@@ -25,6 +25,7 @@ void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 int load_cr0(void);
+void asm_inthandler0c(void);
 void store_cr0(int cr0);
 void load_tr(int tr);
 void asm_inthandler0d(void);
@@ -158,6 +159,7 @@ struct SHEET {
 	unsigned char *buf;
 	int bxsize, bysize, vx0, vy0, col_inv, height, flags;
 	struct SHTCTL *ctl;
+	struct TASK *task;/*用于在应用程序结束时查询图层*/
 };
 struct SHTCTL {
 	unsigned char *vram, *map;
@@ -240,6 +242,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 struct CONSOLE {
 	struct SHEET *sht;
 	int cur_x, cur_y, cur_c;
+	struct TIMER *timer; /*控制光标闪烁*/
 };
 void console_task(struct SHEET *sheet, unsigned int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);

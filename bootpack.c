@@ -41,7 +41,7 @@ void HariMain(void)
 		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 	};
 	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
-
+	struct CONSOLE *cons;
 	init_gdtidt();
 	init_pic();
 	io_sti(); /* IDT/PIC的初始化已经完成，于是开放CPU的中断 */
