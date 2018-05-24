@@ -1,8 +1,6 @@
 /* 命令行窗口相关 */
 
 #include "bootpack.h"
-#include <stdio.h>
-#include <string.h>
 
 void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
@@ -308,18 +306,22 @@ int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline)
 			*((int *)0xfe8) = (int)q;
 			set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60);
 			set_segmdesc(gdt + 1004, segsiz - 1, (int)q, AR_DATA32_RW + 0x60);
+			
 			for (i = 0; i < datsiz; i++) {
 				q[esp + i] = p[dathrb + i];
 			}
+			
 			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
 			shtctl = (struct SHTCTL *)*((int *)0x0fe4);
+			
 			for (i = 0; i < MAX_SHEETS; i++) {
 				sht = &(shtctl->sheets0[i]);
-				if (sht->flags != 0 && sht->task == task) {
+				if ((sht->flags & 0x11) == 0x11 && sht->task == task) {
 					/*找到被应用程序遗留的chuangkou*/
 					sheet_free(sht);//将其关闭
 				}
 			}
+			timer_cancelall(&task->fifo);
 			memman_free_4k(memman, (int)q, segsiz);
 		}
 		else {
@@ -361,6 +363,7 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 	else if (edx == 5) {
 		sht = sheet_alloc(shtctl);
 		sht->task = task;
+		sht->flags |= 0X10;
 		sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
 		make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
 		sheet_slide(sht, 100, 50);
@@ -437,12 +440,22 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			if (i == 3) {	/* 光标OFF */
 				cons->cur_c = -1;
 			}
-			if (i>=256 && i <= 511) { /* 键盘数据（通过任务A） */
+			if (i >= 256) { /* 键盘数据（通过任务A） */
 				reg[7] = i - 256;
 				return 0;
 			}
 		}
+	} else if (edx == 16) {
+		reg[7] = (int) timer_alloc();
+		((struct TIMER *) reg[7])->flags2 = 1;	/*允许自动取消*/
+	} else if (edx == 17) {
+		timer_init((struct TIMER *) ebx, &task->fifo, eax + 256);
+	} else if (edx == 18) {
+		timer_settime((struct TIMER *) ebx, eax);
+	} else if (edx == 19) {
+		timer_free((struct TIMER *) ebx);
 	}
+	
 	return 0;
 }
 

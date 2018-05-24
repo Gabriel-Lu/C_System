@@ -1,9 +1,10 @@
 /* bootpack */
 
 #include "bootpack.h"
-#
-
 #define KEYCMD_LED		0xed
+
+int keywin_off(struct SHEET *key_win, struct SHEET *sht_win, int cur_c, int cur_x);
+int keywin_on(struct SHEET *key_win, struct SHEET *sht_win, int cur_c);
 
 void HariMain(void)
 {
@@ -40,8 +41,11 @@ void HariMain(void)
 		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 	};
-	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
+	int key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	struct CONSOLE *cons;
+	int j, x, y, mmx = -1, mmy = -1;
+	struct SHEET *sht = 0, *key_win;
+	
 	init_gdtidt();
 	init_pic();
 	io_sti(); /* IDT/PIC的初始化已经完成，于是开放CPU的中断 */
@@ -118,6 +122,10 @@ void HariMain(void)
 	sheet_updown(sht_cons,  1);
 	sheet_updown(sht_win,   2);
 	sheet_updown(sht_mouse, 3);
+	
+	key_win = sht_win;
+	sht_cons->task = task_cons;
+	sht_cons->flags |= 0x20;	/*有光标*/
 
 	/*为了避免和键盘当前状态冲突，在一开始先进行设置*/
 	fifo32_put(&keycmd, KEYCMD_LED);
@@ -137,6 +145,12 @@ void HariMain(void)
 		} else {
 			i = fifo32_get(&fifo);
 			io_sti();
+			
+			if (key_win->flags == 0) {	/* 输入窗口被关闭 */
+				key_win = shtctl->sheets[shtctl->top - 1];
+				cursor_c = keywin_on(key_win, sht_win, cursor_c);
+			}
+			
 			if (256 <= i && i <= 511) { /* 键盘数据*/
 				if (i < 0x80 + 256) { /*将按键编码转换为字符编码*/
 					if (key_shift == 0) {
@@ -153,50 +167,41 @@ void HariMain(void)
 					}
 				}
 				if (s[0] != 0) { /*一般字符*/
-					if (key_to == 0) { /*发送给任务A */
+					if (key_win == sht_win) {	/* 发送至任务A */
 						if (cursor_x < 128) {
-							/*显示一个字符之后将光标后移一位*/
+							/* 显示字符并后移光标 */
 							s[1] = 0;
 							putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, s, 1);
 							cursor_x += 8;
 						}
-					} else { /*发送给命令行窗口*/
-						fifo32_put(&task_cons->fifo, s[0] + 256);
+					} else {	/* 发送至命令行窗口 */ 
+						fifo32_put(&key_win->task->fifo, s[0] + 256);
 					}
 				}
 				if (i == 256 + 0x0e) { /* 退格键 */
-					if (key_to == 0) { /*发送给任务A */
+					if (key_win == sht_win) {	/* 发送至任务A */
 						if (cursor_x > 8) {
-							/*用空白擦除光标后将光标前移一位*/
+							/* 擦除光标并前移光标 */
 							putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, " ", 1);
 							cursor_x -= 8;
 						}
-					} else { /*发送给命令行窗口*/
-						fifo32_put(&task_cons->fifo, 8 + 256);
+					} else {	/* 发送至命令行窗口 */
+						fifo32_put(&key_win->task->fifo, 8 + 256);
 					}
 				}
 				if (i == 256 + 0x1c) { /*回车键*/
-					if (key_to != 0) { /*发送至命令行窗口*/
-						fifo32_put(&task_cons->fifo, 10 + 256);
+					if (key_win != sht_win) {	/* 发送至命令行窗口 */
+						fifo32_put(&key_win->task->fifo, 10 + 256);
 					}
 				}
 				if (i == 256 + 0x0f) {	/* Tab */
-					if (key_to == 0) {
-						key_to = 1;
-						make_wtitle8(buf_win,  sht_win->bxsize,  "task_a",  0);
-						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
-						cursor_c = -1; /* 不显示光标 */
-						boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cursor_x, 28, cursor_x + 7, 43);
-						fifo32_put(&task_cons->fifo, 2); /*命令行窗口光标ON */
-					} else {
-						key_to = 0;
-						make_wtitle8(buf_win,  sht_win->bxsize,  "task_a",  1);
-						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
-						cursor_c = COL8_000000;
-						fifo32_put(&task_cons->fifo, 3); /*命令行窗口光标OFF */
+					cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+					j = key_win->height - 1;
+					if (j == 0) {
+						j = shtctl->top - 1;
 					}
-					sheet_refresh(sht_win,  0, 0, sht_win->bxsize,  21);
-					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+					key_win = shtctl->sheets[j];
+					cursor_c = keywin_on(key_win, sht_win, cursor_c);
 				}
 				/*重新显示光标*/
 				if (i == 256 + 0x2a) { /*左Shift ON */
@@ -234,6 +239,9 @@ void HariMain(void)
 					task_cons->tss.eip = (int)asm_end_app;
 					io_sti();
 				}
+				if (i == 256 + 0x57 && shtctl->top > 2) {	/* F11 */
+					sheet_updown(shtctl->sheets[1], shtctl->top - 1);
+				}
 				if (i == 256 + 0xfa) { /*键盘成功接收到数据*/
 					keycmd_wait = -1;
 				}
@@ -264,8 +272,62 @@ void HariMain(void)
 						my = binfo->scrny - 1;
 					}
 					sheet_slide(sht_mouse, mx, my);/* 包含sheet_refresh含sheet_refresh */
-					if ((mdec.btn & 0x01) != 0) { /* 按下左键、移动sht_win */
-						sheet_slide(sht_win, mx - 80, my - 8);
+					if ((mdec.btn & 0x01) != 0) {
+						/* 按下左键 */
+						if (mmx < 0) {
+							/* 通常模式 */
+							/* 从上至下搜寻鼠标指向的图层 */
+							for (j = shtctl->top - 1; j > 0; j--) {
+								sht = shtctl->sheets[j];
+								x = mx - sht->vx0;	/*换算坐标*/
+								y = my - sht->vy0;
+								if (0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize) {
+									/*若在图层内*/
+									if (sht->buf[y * sht->bxsize + x] != sht->col_inv) {
+										sheet_updown(sht, shtctl->top - 1);
+										
+										if (sht != key_win) {
+											cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+											key_win = sht;
+											cursor_c = keywin_on(key_win, sht_win, cursor_c);
+										}
+										
+										if (3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21) {
+											/*在标题栏上*/
+											mmx = mx;	/* 进入窗口移动模式 */
+											mmy = my;
+										}
+										
+										if (sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19) {
+											/* 点击"×"按钮 */
+											if ((sht->flags & 0x10) != 0) {	/* 应用程序窗口 */
+												cons = (struct CONSOLE *) *((int *) 0x0fec);
+												cons_putstr0(cons, "\nBreak(mouse) :\n");	/*显示退出信息*/
+												
+												io_cli();	
+												
+												/*强制退出任务*/
+												task_cons->tss.eax = (int) &(task_cons->tss.esp0);
+												task_cons->tss.eip = (int) asm_end_app;
+												
+												io_sti();
+											}
+										}
+										break;
+									}
+								}
+							}
+						} else {
+							/* 窗口移动模式 */
+							x = mx - mmx;	/* 计算鼠标移动距离 */
+							y = my - mmy;
+							sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
+							mmx = mx;	/* 坐标更新 */
+							mmy = my;
+						}
+					} else {
+						/* 没有按下左键 */
+						mmx = -1;	/* 返回通常模式 */
 					}
 				}
 			} else if (i <= 1) { /* 光标用定时器*/
@@ -289,3 +351,31 @@ void HariMain(void)
 		}
 	}
 }
+
+int keywin_off(struct SHEET *key_win, struct SHEET *sht_win, int cur_c, int cur_x)
+{
+	change_wtitle8(key_win, 0);
+	if (key_win == sht_win) {
+		cur_c = -1; /* 删除光标 */
+		boxfill8(sht_win->buf, sht_win->bxsize, COL8_FFFFFF, cur_x, 28, cur_x + 7, 43);
+	} else {
+		if ((key_win->flags & 0x20) != 0) {
+			fifo32_put(&key_win->task->fifo, 3); /* 命令行窗口光标OFF */
+		}
+	}
+	return cur_c;
+}
+
+int keywin_on(struct SHEET *key_win, struct SHEET *sht_win, int cur_c)
+{
+	change_wtitle8(key_win, 1);
+	if (key_win == sht_win) {
+		cur_c = COL8_000000; /* 显示光标 */
+	} else {
+		if ((key_win->flags & 0x20) != 0) {
+			fifo32_put(&key_win->task->fifo, 2); /* 命令行窗口光标ON */
+		}
+	}
+	return cur_c;
+}
+
