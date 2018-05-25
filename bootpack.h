@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-
 /* asmhead.nas */
 struct BOOTINFO { /* 0x0ff0-0x0fff */
 	char cyls; /* 启动区读磁盘读到此为止 */
@@ -25,13 +22,12 @@ void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
 int load_cr0(void);
-void asm_inthandler0c(void);
 void store_cr0(int cr0);
 void load_tr(int tr);
+void asm_inthandler0c(void);
 void asm_inthandler0d(void);
 void asm_inthandler20(void);
 void asm_inthandler21(void);
-void asm_inthandler27(void);
 void asm_inthandler2c(void);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void farjmp(int eip, int cs);
@@ -105,7 +101,6 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 
 /* int.c */
 void init_pic(void);
-void inthandler27(int *esp);
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
 #define PIC0_IMR		0x0021
@@ -136,12 +131,12 @@ void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 /* memory.c */
-#define MEMMAN_FREES 4090 /* 大约是32KB*/
+#define MEMMAN_FREES		4090	/* ����Ŗ�32KB */
 #define MEMMAN_ADDR			0x003c0000
-struct FREEINFO { /* 可用信息 */
+struct FREEINFO {	/* ������� */
 	unsigned int addr, size;
 };
-struct MEMMAN { /* 内存管理 */
+struct MEMMAN {		/* �������Ǘ� */
 	int frees, maxfrees, lostsize, losts;
 	struct FREEINFO free[MEMMAN_FREES];
 };
@@ -159,7 +154,7 @@ struct SHEET {
 	unsigned char *buf;
 	int bxsize, bysize, vx0, vy0, col_inv, height, flags;
 	struct SHTCTL *ctl;
-	struct TASK *task;/*用于在应用程序结束时查询图层*/
+	struct TASK *task;
 };
 struct SHTCTL {
 	unsigned char *vram, *map;
@@ -202,8 +197,8 @@ void timer_cancelall(struct FIFO32 *fifo);
 /* mtask.c */
 #define MAX_TASKS 1000	/*最大任务数量*/
 #define TASK_GDT0 3			/*定义从GDT的几号开始分配给TSS */
-#define MAX_TASKS_LV    100
-#define MAX_TASKLEVELS  10
+#define MAX_TASKS_LV	100
+#define MAX_TASKLEVELS	10
 struct TSS32 {
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
@@ -215,6 +210,8 @@ struct TASK {
 	int level, priority; /* 优先级 */
 	struct FIFO32 fifo;
 	struct TSS32 tss;
+	struct CONSOLE *cons;
+	int ds_base;
 };
 struct TASKLEVEL {
 	int running; /*正在运行的任务数量*/
@@ -235,33 +232,34 @@ void task_run(struct TASK *task, int level, int priority);
 void task_switch(void);
 void task_sleep(struct TASK *task);
 
-/*window.c*/
+/* window.c */
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 void change_wtitle8(struct SHEET *sht, char act);
 
-//* console.c */
+/* console.c */
 struct CONSOLE {
 	struct SHEET *sht;
 	int cur_x, cur_y, cur_c;
-	struct TIMER *timer; /*控制光标闪烁*/
+	struct TIMER *timer;
 };
-void console_task(struct SHEET *sheet, unsigned int memtotal);
+void console_task(struct SHEET *sheet, int memtotal);
 void cons_putchar(struct CONSOLE *cons, int chr, char move);
 void cons_newline(struct CONSOLE *cons);
 void cons_putstr0(struct CONSOLE *cons, char *s);
 void cons_putstr1(struct CONSOLE *cons, char *s, int l);
-void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, unsigned int memtotal);
-void cmd_mem(struct CONSOLE *cons, unsigned int memtotal);
+void cons_runcmd(char *cmdline, struct CONSOLE *cons, int *fat, int memtotal);
+void cmd_mem(struct CONSOLE *cons, int memtotal);
 void cmd_cls(struct CONSOLE *cons);
 void cmd_dir(struct CONSOLE *cons);
 void cmd_type(struct CONSOLE *cons, int *fat, char *cmdline);
 int cmd_app(struct CONSOLE *cons, int *fat, char *cmdline);
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 int *inthandler0d(int *esp);
-
+int *inthandler0c(int *esp);
+void hrb_api_linewin(struct SHEET *sht, int x0, int y0, int x1, int y1, int col);
 
 /* file.c */
 struct FILEINFO {

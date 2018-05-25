@@ -37,7 +37,6 @@ struct TIMER *timer_alloc(void)
 		if (timerctl.timers0[i].flags == 0) {
 			timerctl.timers0[i].flags = TIMER_FLAGS_ALLOC;
 			timerctl.timers0[i].flags2 = 0;
-			
 			return &timerctl.timers0[i];
 		}
 	}
@@ -116,27 +115,24 @@ void inthandler20(int *esp)
 	if (ts != 0) {
 		task_switch();
 	}
-	
 	return;
 }
 
-/*取消定时器*/
 int timer_cancel(struct TIMER *timer)
 {
 	int e;
 	struct TIMER *t;
 	e = io_load_eflags();
-	io_cli();	
-	
-	if (timer->flags == TIMER_FLAGS_USING) {	/* 判断是否取消 */
+	io_cli(); /*在设置过程中禁止改变定时器状态*/
+	if (timer->flags == TIMER_FLAGS_USING) { /*是否需要取消？*/
 		if (timer == timerctl.t0) {
-			/* 队首的计时器 */
+			/*第一个定时器的取消处理*/
 			t = timer->next;
 			timerctl.t0 = t;
 			timerctl.next = t->timeout;
 		} else {
-			/* 队中的计时器 */
-			/* 将该计时器从队中取出 */
+			/*非第一个定时器的取消处理*/
+			/*找到timer前一个定时器*/
 			t = timerctl.t0;
 			for (;;) {
 				if (t->next == timer) {
@@ -145,29 +141,22 @@ int timer_cancel(struct TIMER *timer)
 				t = t->next;
 			}
 			t->next = timer->next; 
+			/*将之前“timer的下一个”指向“timer的下一个”*/
 		}
 		timer->flags = TIMER_FLAGS_ALLOC;
-		
 		io_store_eflags(e);
-		
-		return 1;	/* 处理成功 */
+		return 1; /*取消处理成功*/
 	}
-	
 	io_store_eflags(e);
-	
-	return 0; /* 不需要取消 */
+	return 0; /*不需要取消处理*/
 }
 
-/*取消程序结束时不需要的定时器*/
 void timer_cancelall(struct FIFO32 *fifo)
 {
 	int e, i;
 	struct TIMER *t;
 	e = io_load_eflags();
-	
-	io_cli();	
-	
-	/*遍历计时器列表，寻找该程序使用的计时器*/
+	io_cli(); /*在设置过程中禁止改变定时器状态*/
 	for (i = 0; i < MAX_TIMER; i++) {
 		t = &timerctl.timers0[i];
 		if (t->flags != 0 && t->flags2 != 0 && t->fifo == fifo) {
@@ -176,7 +165,5 @@ void timer_cancelall(struct FIFO32 *fifo)
 		}
 	}
 	io_store_eflags(e);
-	
 	return;
 }
-

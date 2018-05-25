@@ -19,12 +19,12 @@ IMGTOL   = $(TOOLPATH)imgtol.com
 COPY     = copy
 DEL      = del
 
-# ÉfÉtÉHÉãÉgìÆçÏ
+# ÈªòËÆ§Âä®‰Ωú
 
 default :
 	$(MAKE) img
 
-# ÉtÉ@ÉCÉãê∂ê¨ãKë•
+# ÈïúÂÉèÊñá‰ª∂ÁîüÊàê
 
 ipl10.bin : ipl10.nas Makefile
 	$(NASK) ipl10.nas ipl10.bin ipl10.lst
@@ -136,10 +136,38 @@ walk.bim : walk.obj a_nask.obj Makefile
 walk.hrb : walk.bim Makefile
 	$(BIM2HRB) walk.bim walk.hrb 48k
 
+noodle.bim : noodle.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:noodle.bim stack:1k map:noodle.map \
+		noodle.obj a_nask.obj
+
+noodle.hrb : noodle.bim Makefile
+	$(BIM2HRB) noodle.bim noodle.hrb 40k
+
+beepdown.bim : beepdown.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:beepdown.bim stack:1k map:beepdown.map \
+		beepdown.obj a_nask.obj
+
+beepdown.hrb : beepdown.bim Makefile
+	$(BIM2HRB) beepdown.bim beepdown.hrb 40k
+
+color.bim : color.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:color.bim stack:1k map:color.map \
+		color.obj a_nask.obj
+
+color.hrb : color.bim Makefile
+	$(BIM2HRB) color.bim color.hrb 56k
+
+color2.bim : color2.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:color2.bim stack:1k map:color2.map \
+		color2.obj a_nask.obj
+
+color2.hrb : color2.bim Makefile
+	$(BIM2HRB) color2.bim color2.hrb 56k
+
 haribote.img : ipl10.bin haribote.sys Makefile \
 		hello.hrb hello2.hrb a.hrb hello3.hrb hello4.hrb hello5.hrb \
 		winhelo.hrb winhelo2.hrb winhelo3.hrb star1.hrb stars.hrb stars2.hrb \
-		lines.hrb walk.hrb
+		lines.hrb walk.hrb noodle.hrb beepdown.hrb color.hrb color2.hrb
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:haribote.sys to:@: \
@@ -159,9 +187,13 @@ haribote.img : ipl10.bin haribote.sys Makefile \
 		copy from:stars2.hrb to:@: \
 		copy from:lines.hrb to:@: \
 		copy from:walk.hrb to:@: \
+		copy from:noodle.hrb to:@: \
+		copy from:beepdown.hrb to:@: \
+		copy from:color.hrb to:@: \
+		copy from:color2.hrb to:@: \
 		imgout:haribote.img
 
-# àÍî ãKë•
+# ÂÖ∂‰ªñÊåá‰ª§
 
 %.gas : %.c bootpack.h Makefile
 	$(CC1) -o $*.gas $*.c
@@ -172,7 +204,7 @@ haribote.img : ipl10.bin haribote.sys Makefile \
 %.obj : %.nas Makefile
 	$(NASK) $*.nas $*.obj $*.lst
 
-# ÉRÉ}ÉìÉh
+# ËøêË°åÁ®ãÂ∫è
 
 img :
 	$(MAKE) haribote.img
@@ -190,9 +222,9 @@ clean :
 	-$(DEL) *.bin
 	-$(DEL) *.lst
 	-$(DEL) *.obj
-	-$(DEL) *.map
-	-$(DEL) *.bim
-	-$(DEL) *.hrb
+	-$(DEL) bootpack.map
+	-$(DEL) bootpack.bim
+	-$(DEL) bootpack.hrb
 	-$(DEL) haribote.sys
 
 src_only :

@@ -6,7 +6,7 @@ void api_point(int win, int x, int y, int col);
 void api_refreshwin(int win, int x0, int y0, int x1, int y1);
 void api_end(void);
 
-int rand(void);		/* ²úÉú0-32767µÄËæ»úÊı */
+int rand(void);		/*äº§ç”Ÿ0ï½32767çš„éšæœºæ•°*/
 
 void HariMain(void)
 {
@@ -15,11 +15,11 @@ void HariMain(void)
 	api_initmalloc();
 	buf = api_malloc(150 * 100);
 	win = api_openwin(buf, 150, 100, -1, "stars2");
-	api_boxfilwin(win + 1,  6, 26, 143, 93, 0 /* ºÚÉ«*/);
+	api_boxfilwin(win + 1,  6, 26, 143, 93, 0);/*é»‘è‰²*/
 	for (i = 0; i < 50; i++) {
 		x = (rand() % 137) +  6;
 		y = (rand() %  67) + 26;
-		api_point(win + 1, x, y, 3 /* »ÆÉ« */);
+		api_point(win + 1, x, y, 3);/*é»„è‰²*/
 	}
 	api_refreshwin(win,  6, 26, 144, 94);
 	api_end();

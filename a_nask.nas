@@ -21,6 +21,7 @@
 		GLOBAL	_api_inittimer
 		GLOBAL	_api_settimer
 		GLOBAL	_api_freetimer
+		GLOBAL	_api_beep
 
 [SECTION .text]
 
@@ -101,7 +102,7 @@ _api_initmalloc:	; void api_initmalloc(void);
 		MOV		EDX,8
 		MOV		EBX,[CS:0x0020]		; malloc内存空间的地址
 		MOV		EAX,EBX
-		ADD		EAX,32*1024			; 加上32KB
+		ADD		EAX,32*1024				; 加上32KB
 		MOV		ECX,[CS:0x0000]		; 数据段的大小
 		SUB		ECX,EAX
 		INT		0x40
@@ -190,7 +191,7 @@ _api_getkey:		; int api_getkey(int mode);
 		MOV		EAX,[ESP+4]	; mode
 		INT		0x40
 		RET
-		
+
 _api_alloctimer:	; int api_alloctimer(void);
 		MOV		EDX,16
 		INT		0x40
@@ -222,3 +223,8 @@ _api_freetimer:		; void api_freetimer(int timer);
 		POP		EBX
 		RET
 
+_api_beep:			; void api_beep(int tone);
+		MOV		EDX,20
+		MOV		EAX,[ESP+4]			; tone
+		INT		0x40
+		RET

@@ -12,7 +12,7 @@ void HariMain(void)
 	api_initmalloc();
 	buf = api_malloc(150 * 100);
 	win = api_openwin(buf, 150, 100, -1, "star1");
-	api_boxfilwin(win,  6, 26, 143, 93, 0 /* ºÚÉ« */);
-	api_point(win, 75, 59, 3 /* »ÆÉ« */);
+	api_boxfilwin(win,  6, 26, 143, 93, 0);/*é»‘è‰²*/
+	api_point(win, 75, 59, 3);/*é»„è‰²*/
 	api_end();
 }

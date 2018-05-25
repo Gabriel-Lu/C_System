@@ -21,7 +21,7 @@ void HariMain(void)
 	api_refreshwin(win,  6, 26, 154, 90);
 	for (;;) {
 		if (api_getkey(1) == 0x0a) {
-			break; /* 按下Enter关闭窗口 */
+			break; /*鎸変笅鍥炶溅閿垯break; */
 		}
 	}
 	api_closewin(win);
